@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <!-- Cabeçalho -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Workspace</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Dialog Polyfill para suporte a diálogos em navegadores que não suportam -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dialog-polyfill/0.5.6/dialog-polyfill.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dialog-polyfill/0.5.6/dialog-polyfill.min.js"></script>
+
+    <!-- Estilos Personalizados -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --bg-primary: #121212;
+            --bg-secondary: #1e1e1e;
+            --accent-primary: #ff2020;
+            --accent-secondary: #8b0000;
+            --text-primary: #ffffff;
+            --text-secondary: #666666;
+            --transition-base: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(30, 30, 30, 0.7);
+            border: 1px solid rgba(255, 32, 32, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 0.75rem;
+            transition: var(--transition-base);
+        }
+
+        .glass-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 32, 32, 0.2);
+            background: rgba(40, 40, 40, 0.7);
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .status-ideation {
+            background: rgba(0, 123, 255, 0.1);
+            color: #007bff;
+        }
+
+        .status-planning {
+            background: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+        }
+
+        .status-progress {
+            background: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+        }
+
+        .status-review {
+            background: rgba(23, 162, 184, 0.1);
+            color: #17a2b8;
+        }
+
+        .status-completed {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+        }
+
+        .progress-bar {
+            height: 2px;
+            background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.5rem;
+            background: var(--bg-primary);
+            border: 1px solid rgba(255, 32, 32, 0.1);
+            border-radius: 0.5rem;
+            color: var(--text-primary);
+            transition: var(--transition-base);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border: none;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal::backdrop {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+        }
+
+        .checkbox {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 32, 32, 0.3);
+            border-radius: 4px;
+            background: transparent;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .checkbox:checked {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .checkbox:checked::after {
+            content: '✓';
+            position: absolute;
+            color: white;
+            font-size: 12px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        @media (max-width: 768px) {
+            .grid-cols-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body class="flex">
+    <!-- Sidebar -->
+    <aside class="w-64 min-h-screen bg-[#121212] border-r border-red-900/10 p-4">
+        <!-- Logo -->
+        <div class="flex items-center space-x-3 mb-8">
+            <div class="w-10 h-10 bg-red-600/10 rounded-full flex items-center justify-center">
+                <!-- Ícone da logo -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+            </div>
+            <h1 class="text-xl font-bold text-red-500">Quantum</h1>
+        </div>
+
+        <!-- User Profile -->
+        <div class="glass-card p-3 mb-6">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-red-500/20 rounded-full"></div>
+                <div>
+                    <h3 class="font-medium text-sm">Admin User</h3>
+                    <p class="text-xs text-gray-500">admin@quantum.dev</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav>
+            <ul class="space-y-2">
+                <li>
+                    <button onclick="scrollToStage('ideation')" class="w-full flex items-center space-x-2 p-2 rounded-lg hover:bg-red-500/10 transition-colors">
+                        <span class="text-sm">Ideação</span>
+                    </button>
+                </li>
+                <li>
+                    <button onclick="scrollToStage('planning')" class="w-full flex items-center space-x-2 p-2 rounded-lg hover:bg-red-500/10 transition-colors">
+                        <span class="text-sm">Planejamento</span>
+                    </button>
+                </li>
+                <!-- Separador -->
+                <li><hr class="border-red-500/20 my-2"></li>
+                <li>
+                    <button onclick="scrollToStage('progress')" class="w-full flex items-center space-x-2 p-2 rounded-lg hover:bg-red-500/10 transition-colors">
+                        <span class="text-sm">Em Progresso</span>
+                    </button>
+                </li>
+                <li>
+                    <button onclick="scrollToStage('review')" class="w-full flex items-center space-x-2 p-2 rounded-lg hover:bg-red-500/10 transition-colors">
+                        <span class="text-sm">Revisão</span>
+                    </button>
+                </li>
+                <!-- Separador -->
+                <li><hr class="border-red-500/20 my-2"></li>
+                <li>
+                    <button onclick="scrollToStage('completed')" class="w-full flex items-center space-x-2 p-2 rounded-lg hover:bg-red-500/10 transition-colors">
+                        <span class="text-sm">Concluídos</span>
+                    </button>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-6">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-6">
+            <div>
+                <h2 class="text-2xl font-bold text-red-500">Dashboard</h2>
+                <p class="text-sm text-gray-500">Resumo de projetos e atividades recentes</p>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="relative">
+                <input type="text" id="searchInput" onkeyup="filterProjects()" placeholder="Pesquisar projetos..." class="form-input">
+            </div>
+
+            <!-- New Button -->
+            <div class="relative">
+                <button onclick="toggleNewMenu()" class="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>Novo</span>
+                </button>
+
+                <!-- Dropdown Menu -->
+                <div id="newMenu" class="hidden absolute right-0 mt-2 w-48 glass-card shadow-lg z-10">
+                    <div class="py-1">
+                        <button onclick="openModal('projectModal')" class="w-full text-left px-4 py-2 text-sm hover:bg-red-500/10">
+                            Novo Projeto
+                        </button>
+                        <!-- Separador -->
+                        <hr class="border-gray-700 my-1">
+                        <button onclick="openModal('taskModal')" class="w-full text-left px-4 py-2 text-sm hover:bg-red-500/10">
+                            Nova Tarefa
+                        </button>
+                        <!-- Separador -->
+                        <hr class="border-gray-700 my-1">
+                        <button onclick="openModal('teamModal')" class="w-full text-left px-4 py-2 text-sm hover:bg-red-500/10">
+                            Novo Time
+                        </button>
+                        <!-- Separador -->
+                        <hr class="border-gray-700 my-1">
+                        <button onclick="openModal('reportModal')" class="w-full text-left px-4 py-2 text-sm hover:bg-red-500/10">
+                            Gerar Relatório
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Project Stages -->
+        <div id="projectStages">
+            <!-- Sections for each project stage will be rendered here -->
+        </div>
+
+        <!-- Completed Projects -->
+        <div id="completedStage" class="mt-6">
+            <h3 class="text-lg font-bold text-red-500 mb-4">Projetos Concluídos</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="completedProjectsGrid">
+                <!-- Completed projects will be added here dynamically -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Modals -->
+    <!-- Project Modal -->
+    <dialog id="projectModal" class="modal">
+        <form id="projectForm" class="space-y-4" onsubmit="handleNewProject(event)">
+            <h3 class="text-xl font-bold text-red-500 mb-4">Novo Projeto</h3>
+            
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Nome do Projeto</label>
+                <input type="text" class="form-input" required name="projectName">
+            </div>
+            
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Descrição</label>
+                <textarea class="form-input" rows="3" required name="projectDescription"></textarea>
+            </div>
+            
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Status</label>
+                <select class="form-input" required name="projectStatus">
+                    <option value="ideation">Ideação</option>
+                    <option value="planning">Planejamento</option>
+                    <option value="progress">Em Progresso</option>
+                    <option value="review">Revisão</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Data de Início</label>
+                <input type="date" class="form-input" required name="projectStartDate">
+            </div>
+
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Data de Término</label>
+                <input type="date" class="form-input" required name="projectEndDate">
+            </div>
+
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Membros</label>
+                <div id="projectMembers" class="space-y-2">
+                    <!-- Project members added here dynamically -->
+                </div>
+                <button type="button" onclick="addProjectMember()" class="text-red-500 hover:text-red-400 mt-2">
+                    + Adicionar Membro
+                </button>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="closeModal('projectModal')" 
+                    class="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">
+                    Cancelar
+                </button>
+                <button type="submit" 
+                    class="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors">
+                    Criar Projeto
+                </button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Task Modal -->
+    <dialog id="taskModal" class="modal">
+        <form id="taskForm" class="space-y-4" onsubmit="handleNewTask(event)">
+            <h3 class="text-xl font-bold text-red-500 mb-4">Nova Tarefa</h3>
+            
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Título da Tarefa</label>
+                <input type="text" class="form-input" required name="taskName">
+            </div>
+            
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Descrição</label>
+                <textarea class="form-input" rows="3" required name="taskDescription"></textarea>
+            </div>
+            
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Projeto</label>
+                <select class="form-input" required name="taskProject" id="taskProject">
+                    <!-- Filled dynamically -->
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Data de Início</label>
+                <input type="date" class="form-input" required name="taskStartDate">
+            </div>
+
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Data de Término</label>
+                <input type="date" class="form-input" required name="taskEndDate">
+            </div>
+
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Membros</label>
+                <div id="taskMembers" class="space-y-2">
+                    <!-- Task members added here dynamically -->
+                </div>
+                <button type="button" onclick="addTaskMember()" class="text-red-500 hover:text-red-400 mt-2">
+                    + Adicionar Membro
+                </button>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="closeModal('taskModal')" 
+                    class="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">
+                    Cancelar
+                </button>
+                <button type="submit" 
+                    class="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors">
+                    Adicionar Tarefa
+                </button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Team Modal -->
+    <dialog id="teamModal" class="modal">
+        <form id="teamForm" class="space-y-4" onsubmit="handleNewTeam(event)">
+            <h3 class="text-xl font-bold text-red-500 mb-4">Novo Time</h3>
+            
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Nome do Time</label>
+                <input type="text" class="form-input" required name="teamName">
+            </div>
+            
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Descrição</label>
+                <textarea class="form-input" rows="3" required name="teamDescription"></textarea>
+            </div>
+            
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Membros</label>
+                <div id="teamMembers" class="space-y-2">
+                    <!-- Team members added here dynamically -->
+                </div>
+                <button type="button" onclick="addTeamMember()" 
+                    class="text-red-500 hover:text-red-400 mt-2">
+                    + Adicionar Membro
+                </button>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="closeModal('teamModal')" 
+                    class="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">
+                    Cancelar
+                </button>
+                <button type="submit" 
+                    class="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors">
+                    Criar Time
+                </button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Report Modal -->
+    <dialog id="reportModal" class="modal">
+        <form id="reportForm" class="space-y-4" onsubmit="generateReport(event)">
+            <h3 class="text-xl font-bold text-red-500 mb-4">Gerar Relatório</h3>
+            
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Tipo de Relatório</label>
+                <select class="form-input" required name="reportType">
+                    <option value="project">Relatório de Projetos</option>
+                    <option value="team">Relatório de Times</option>
+                    <option value="activity">Relatório de Atividades</option>
+                </select>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="closeModal('reportModal')" 
+                    class="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">
+                    Cancelar
+                </button>
+                <button type="submit" 
+                    class="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors">
+                    Gerar Relatório
+                </button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Scripts -->
+    <script>
+        // Estado do sistema
+        let state = {
+            projects: [],
+            teams: [],
+            members: [],
+            filteredProjects: []
+        };
+
+        // Funções de UI
+        function toggleNewMenu() {
+            const menu = document.getElementById('newMenu');
+            menu.classList.toggle('hidden');
+        }
+
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modalId === 'taskModal') {
+                updateTaskProjectSelect();
+                initTaskMembers();
+            } else if (modalId === 'teamModal') {
+                initTeamMembers();
+            } else if (modalId === 'projectModal') {
+                initProjectMembers();
+            }
+            modal.showModal();
+            toggleNewMenu();
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.close();
+        }
+
+        function scrollToStage(stageId) {
+            const stageElement = document.getElementById(stageId + 'Stage');
+            if (stageElement) {
+                stageElement.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        function filterProjects() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            state.filteredProjects = state.projects.filter(project => project.name.toLowerCase().includes(query));
+            renderProjects();
+        }
+
+        // Funções de Projeto
+        function handleNewProject(event) {
+            event.preventDefault();
+            
+            const form = event.target;
+            const projectName = form.projectName.value.trim();
+            const projectDescription = form.projectDescription.value.trim();
+            const projectStatus = form.projectStatus.value;
+            const projectStartDate = form.projectStartDate.value;
+            const projectEndDate = form.projectEndDate.value;
+            const projectMembers = Array.from(form.querySelectorAll('#projectMembers input')).map(input => input.value);
+    
+            if (!projectName || !projectDescription || !projectStartDate || !projectEndDate) {
+                alert('Por favor, preencha todos os campos.');
+                return;
+            }
+    
+            const newProject = {
+                id: Date.now(),
+                name: sanitizeHTML(projectName),
+                description: sanitizeHTML(projectDescription),
+                status: projectStatus,
+                tasks: [],
+                completedTasks: 0,
+                totalTasks: 0,
+                createdAt: new Date(),
+                completedAt: null,
+                startDate: projectStartDate,
+                endDate: projectEndDate,
+                members: projectMembers,
+                comments: []
+            };
+    
+            state.projects.push(newProject);
+            state.filteredProjects = state.projects;
+            renderProjects();
+            closeModal('projectModal');
+            form.reset();
+        }
+
+        function handleNewTask(event) {
+            event.preventDefault();
+            const form = event.target;
+            const projectId = parseInt(form.taskProject.value);
+            const taskName = form.taskName.value.trim();
+            const taskDescription = form.taskDescription.value.trim();
+            const taskStartDate = form.taskStartDate.value;
+            const taskEndDate = form.taskEndDate.value;
+            const taskMembers = Array.from(form.querySelectorAll('#taskMembers input')).map(input => input.value);
+    
+            if (!projectId || !taskName || !taskDescription || !taskStartDate || !taskEndDate) {
+                alert('Por favor, preencha todos os campos.');
+                return;
+            }
+    
+            const project = state.projects.find(p => p.id === projectId);
+            
+            if (project) {
+                const newTask = {
+                    id: Date.now(),
+                    name: sanitizeHTML(taskName),
+                    description: sanitizeHTML(taskDescription),
+                    completed: false,
+                    createdAt: new Date(),
+                    startDate: taskStartDate,
+                    endDate: taskEndDate,
+                    members: taskMembers,
+                    comments: []
+                };
+    
+                project.tasks.push(newTask);
+                project.totalTasks++;
+                renderProjects();
+            } else {
+                alert('Projeto não encontrado.');
+            }
+            
+            closeModal('taskModal');
+            form.reset();
+        }
+
+        function toggleTaskStatus(projectId, taskId) {
+            const project = state.projects.find(p => p.id === projectId);
+            if (!project) return;
+
+            const task = project.tasks.find(t => t.id === taskId);
+            if (task) {
+                task.completed = !task.completed;
+                project.completedTasks = project.tasks.filter(t => t.completed).length;
+                renderProjects();
+            }
+        }
+
+        function deleteProject(projectId) {
+            if (confirm('Tem certeza que deseja excluir este projeto?')) {
+                state.projects = state.projects.filter(p => p.id !== projectId);
+                state.filteredProjects = state.projects;
+                renderProjects();
+            }
+        }
+
+        function completeProject(projectId) {
+            const project = state.projects.find(p => p.id === projectId);
+            if (project) {
+                project.status = 'completed';
+                project.completedAt = new Date();
+                renderProjects();
+                renderCompletedProjects();
+            }
+        }
+
+        function moveToNextStage(projectId) {
+            const project = state.projects.find(p => p.id === projectId);
+            if (project) {
+                const stages = ['ideation', 'planning', 'progress', 'review', 'completed'];
+                const currentIndex = stages.indexOf(project.status);
+                if (currentIndex < stages.length - 1) {
+                    project.status = stages[currentIndex + 1];
+                    if (project.status === 'completed') {
+                        project.completedAt = new Date();
+                        renderCompletedProjects();
+                    }
+                    renderProjects();
+                }
+            }
+        }
+
+        // Renderização de Projetos por Etapas
+        function renderProjects() {
+            const stages = ['ideation', 'planning', 'progress', 'review'];
+            const stageLabels = {
+                'ideation': 'Ideação',
+                'planning': 'Planejamento',
+                'progress': 'Em Progresso',
+                'review': 'Revisão'
+            };
+
+            const container = document.getElementById('projectStages');
+            container.innerHTML = '';
+
+            stages.forEach(stage => {
+                const stageProjects = (state.filteredProjects || state.projects).filter(project => project.status === stage);
+
+                if (stageProjects.length > 0) {
+                    const section = document.createElement('div');
+                    section.classList.add('mb-6');
+                    section.id = stage + 'Stage';
+
+                    const header = document.createElement('h3');
+                    header.classList.add('text-lg', 'font-bold', 'text-red-500', 'mb-4');
+                    header.textContent = stageLabels[stage];
+
+                    const grid = document.createElement('div');
+                    grid.classList.add('grid', 'grid-cols-1', 'md:grid-cols-2', 'lg:grid-cols-3', 'gap-4');
+
+                    grid.innerHTML = stageProjects.map(project => `
+                        <div class="glass-card p-4 space-y-3 relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-full h-1 progress-bar" 
+                                style="width: ${project.totalTasks ? (project.completedTasks / project.totalTasks) * 100 : 0}%;"></div>
+                            <div class="flex justify-between items-center">
+                                <h3 class="font-bold text-red-500">${project.name}</h3>
+                                <div class="flex items-center space-x-2">
+                                    <button onclick="moveToNextStage(${project.id})" 
+                                        class="text-blue-500 hover:text-blue-400" aria-label="Mover para Próxima Etapa">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" 
+                                             viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                                  d="M9 5l7 7-7 7"/>
+                                        </svg>
+                                    </button>
+                                    <button onclick="deleteProject(${project.id})" class="text-red-500 hover:text-red-400" aria-label="Excluir Projeto">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" 
+                                             viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                                  d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <p class="text-gray-300 text-xs">${project.description}</p>
+                            <p class="text-gray-400 text-xs">Início: ${project.startDate} | Término: ${project.endDate}</p>
+                            <p class="text-gray-400 text-xs">Membros: ${project.members.join(', ')}</p>
+                            <div class="space-y-2">
+                                ${project.tasks.map(task => `
+                                    <div class="flex items-center justify-between p-2 bg-black/20 rounded-lg">
+                                        <div class="flex items-center space-x-2">
+                                            <input type="checkbox" 
+                                                ${task.completed ? 'checked' : ''} 
+                                                onchange="toggleTaskStatus(${project.id}, ${task.id})"
+                                                class="checkbox">
+                                            <span class="${task.completed ? 'line-through text-gray-500' : ''}">${task.name}</span>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-400 text-xs">${project.completedTasks}/${project.totalTasks} tarefas</span>
+                                ${project.status === 'planning' ? `
+                                <button onclick="openModal('taskModal')" class="text-red-500 hover:text-red-400">
+                                    + Adicionar Tarefa
+                                </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `).join('');
+
+                    section.appendChild(header);
+                    section.appendChild(grid);
+                    container.appendChild(section);
+                }
+            });
+        }
+
+        // Renderização de Projetos Concluídos
+        function renderCompletedProjects() {
+            const grid = document.getElementById('completedProjectsGrid');
+            const completedProjects = state.projects.filter(p => p.status === 'completed');
+
+            grid.innerHTML = completedProjects.map(project => `
+                <div class="glass-card p-4 space-y-3 relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-green-500"></div>
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-bold text-red-500">${project.name}</h3>
+                        <span class="status-badge status-completed">Concluído</span>
+                    </div>
+                    <p class="text-gray-300 text-xs">${project.description}</p>
+                    <p class="text-gray-400 text-xs">Início: ${project.startDate} | Término: ${project.endDate}</p>
+                    <p class="text-gray-400 text-xs">Membros: ${project.members.join(', ')}</p>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-400 text-xs">${project.completedTasks}/${project.totalTasks} tarefas</span>
+                        <span class="text-gray-400 text-xs">Concluído em ${project.completedAt.toLocaleDateString()}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Atualiza a lista de projetos no modal de adicionar tarefa
+        function updateTaskProjectSelect() {
+            const select = document.getElementById('taskProject');
+            select.innerHTML = `
+                <option value="">Selecione um projeto</option>
+                ${state.projects.filter(p => p.status === 'planning').map(project => `
+                    <option value="${project.id}">${project.name}</option>
+                `).join('')}
+            `;
+        }
+
+        // Funções de Equipe e Membros
+        function initTeamMembers() {
+            const membersContainer = document.getElementById('teamMembers');
+            membersContainer.innerHTML = '';
+            addTeamMember();
+        }
+
+        function addTeamMember() {
+            const membersContainer = document.getElementById('teamMembers');
+            const newMember = document.createElement('div');
+            newMember.classList.add('flex', 'items-center', 'justify-between', 'p-2', 'bg-black/20', 'rounded-lg');
+            newMember.innerHTML = `
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 bg-red-500/20 rounded-full"></div>
+                    <input type="text" class="form-input" placeholder="Nome do Membro" required>
+                </div>
+                <button type="button" onclick="removeMember(this)" class="text-red-500 hover:text-red-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" 
+                         viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            `;
+            membersContainer.appendChild(newMember);
+        }
+
+        function initProjectMembers() {
+            const membersContainer = document.getElementById('projectMembers');
+            membersContainer.innerHTML = '';
+            addProjectMember();
+        }
+
+        function addProjectMember() {
+            const membersContainer = document.getElementById('projectMembers');
+            const newMember = document.createElement('div');
+            newMember.classList.add('flex', 'items-center', 'justify-between', 'p-2', 'bg-black/20', 'rounded-lg');
+            newMember.innerHTML = `
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 bg-red-500/20 rounded-full"></div>
+                    <input type="text" class="form-input" placeholder="Nome do Membro" required>
+                </div>
+                <button type="button" onclick="removeMember(this)" class="text-red-500 hover:text-red-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" 
+                         viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            `;
+            membersContainer.appendChild(newMember);
+        }
+
+        function initTaskMembers() {
+            const membersContainer = document.getElementById('taskMembers');
+            membersContainer.innerHTML = '';
+            addTaskMember();
+        }
+
+        function addTaskMember() {
+            const membersContainer = document.getElementById('taskMembers');
+            const newMember = document.createElement('div');
+            newMember.classList.add('flex', 'items-center', 'justify-between', 'p-2', 'bg-black/20', 'rounded-lg');
+            newMember.innerHTML = `
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 bg-red-500/20 rounded-full"></div>
+                    <input type="text" class="form-input" placeholder="Nome do Membro" required>
+                </div>
+                <button type="button" onclick="removeMember(this)" class="text-red-500 hover:text-red-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" 
+                         viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            `;
+            membersContainer.appendChild(newMember);
+        }
+
+        function removeMember(button) {
+            button.closest('.flex').remove();
+        }
+
+        function handleNewTeam(event) {
+            event.preventDefault();
+            const form = event.target;
+            const newTeam = {
+                id: Date.now(),
+                name: form.teamName.value,
+                description: form.teamDescription.value,
+                members: Array.from(form.querySelectorAll('#teamMembers input')).map(input => input.value)
+            };
+
+            state.teams.push(newTeam);
+            closeModal('teamModal');
+            form.reset();
+        }
+
+        // Funções de Relatório
+        function generateReport(event) {
+            event.preventDefault();
+            const form = event.target;
+            const reportType = form.reportType.value;
+
+            // Implementar a lógica de geração de relatórios
+            console.log(`Gerando relatório do tipo "${reportType}"`);
+            closeModal('reportModal');
+        }
+
+        // Funções Auxiliares
+        function sanitizeHTML(str) {
+            const temp = document.createElement('div');
+            temp.textContent = str;
+            return temp.innerHTML;
+        }
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', () => {
+            // Registrar diálogos
+            document.querySelectorAll('dialog').forEach(dialog => {
+                dialogPolyfill.registerDialog(dialog);
+            });
+
+            // Renderização inicial
+            state.filteredProjects = state.projects;
+            renderProjects();
+            renderCompletedProjects();
+
+            // Fechar menu ao clicar fora
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#newMenu') && !e.target.closest('button[onclick="toggleNewMenu()"]')) {
+                    document.getElementById('newMenu').classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
